@@ -1,0 +1,103 @@
+#include "msp.h"
+#include <stdio.h>
+
+void keypad_init(void);     //prototype for GPIO initialization
+uint8_t Read_Keypad(void);  // prototype for keypad scan subroutine
+void Print_Keys(void);      //Print Key pressed
+void SysTick_Init(void);
+void SysTick_delay(uint16_t delay);
+
+void main(void)
+{
+    WDT_A->CTL = WDT_A_CTL_PW | WDT_A_CTL_HOLD;     // stop watchdog timer
+
+    printf("Hello world!\n");
+    while(1){
+
+    }
+}
+
+//Pin#
+//7     1    2    3
+//6     4    5    6
+//5     7    8    9
+//4     *    0    #
+//Pin#  3    2    1
+void SysTick_Init(void){
+    SysTick -> CTRL  = 0;                 // disable SysTick During step
+    SysTick-> LOAD = 0x00FFFFFF;         // max reload value
+    SysTick -> VAL = 0;                   // any write to current clears it
+    SysTick -> CTRL  = 0x00000005;        // enable systic, 3MHz, No Interrupts
+}
+
+void SysTick_delay(uint16_t delay){// Systickdelay function
+    SysTick -> LOAD = ((delay * 3000) - 1);   //delay for 1 ms
+    SysTick -> VAL = 0;    // any write to CVR clears it
+    while((SysTick->CTRL & 0x00010000) == 0);    // wait for flag to be SET
+}
+
+uint8_t Read_Keypad(void){
+    uint8_t col, row;
+    for(col = 0; col < 3; col++){
+        P4->DIR = 0x00;
+        P4->DIR |= BIT(4 + col);
+        P4->OUT &=~ BIT(4 + col);
+
+        SysTick_delay(10);
+        row = P4 -> IN & 0x0F;
+
+        while(!(P4IN & BIT0) | !(P4IN & BIT1) | !(P4IN & BIT2) | !(P4IN & BIT3));
+
+        if(row != 0x0F) // if detected an input
+            break;
+
+    }
+    uint8_t num = 0;
+    P4 -> DIR = 0x00;
+    if(col == 3)
+        return 0;
+    if(row == 0x0E){
+        num = col + 1;
+        return num;
+    }
+    if(row == 0x0D){
+        num = 3 * col + 1;
+        return num;
+    }
+    if(row == 0x0C){
+        num = 6 * col + 1;
+        return num;
+    }
+    if(row == 0x07){
+        num = 9 * col + 1;
+        return num;
+    }
+}
+
+
+void Print_Keys(void){
+
+    while(!(P4IN & BIT0) | !(P4IN & BIT1) | !(P4IN & BIT2) | !(P4IN & BIT3)){
+
+       char keySymb;
+       char lastSymb;
+       int i, j;
+       char key[4][3] = {
+          {'1', '2', '3'} ,
+          {'4', '5', '6'} ,
+          {'7', '8', '9'} ,
+          {'*', '0','#'}
+       };
+
+       key[i][j] = keySymb;
+
+
+       if(keySymb != lastSymb){
+            printf("%c\n", keySymb);
+            lastSymb = keySymb;
+       }
+           else{
+                lastSymb = NULL;
+           }
+    }
+}
